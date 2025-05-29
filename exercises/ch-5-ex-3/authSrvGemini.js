@@ -2,7 +2,6 @@
 
 const express = require("express");
 const url = require("url");
-const bodyParser = require("body-parser");
 const randomstring = require("randomstring");
 const cons = require("consolidate");
 const nosql = require("nosql").load("database.nosql");
@@ -10,8 +9,8 @@ const querystring = require("querystring");
 
 const app = express();
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.engine("html", cons.underscore);
 app.set("view engine", "html");
@@ -69,10 +68,9 @@ app.get("/authorize", (req, res) => {
     const rscope = req.query.scope ? req.query.scope.split(" ") : undefined;
     const cscope = client.scope ? client.scope.split(" ") : undefined;
     if (rscope && cscope && rscope.filter(item => !cscope.includes(item)).length > 0) {
-      const urlParsed = buildUrl(req.query.redirect_uri, {
-        error: "invalid_scope",
-      });
-      res.redirect(urlParsed);
+      const urlParsed = new url.URL(req.query.redirect_uri);
+      urlParsed.searchParams.set("error", "invalid_scope");
+      res.redirect(urlParsed.toString());
       return;
     }
     const reqid = randomstring.generate(8);
@@ -109,10 +107,9 @@ app.post("/approve", (req, res) => {
       const client = getClient(query.client_id);
       const cscope = client.scope ? client.scope.split(" ") : undefined;
       if (rscope && cscope && rscope.filter(item => !cscope.includes(item)).length > 0) {
-        const urlParsed = buildUrl(query.redirect_uri, {
-          error: "invalid_scope",
-        });
-        res.redirect(urlParsed);
+          const urlParsed = new url.URL(query.redirect_uri);
+          urlParsed.searchParams.set("error", "invalid_scope");
+        res.redirect(urlParsed.toString());
         return;
       }
       console.log("Requested scopes ->", rscope);
@@ -126,26 +123,23 @@ app.post("/approve", (req, res) => {
 
       codes[code] = { request: query, scope: rscope };
 
-      const urlParsed = buildUrl(query.redirect_uri, {
-        code: code,
-        state: query.state,
-      });
-      res.redirect(urlParsed);
+      const urlParsed = new url.URL(query.redirect_uri);
+      urlParsed.searchParams.set("code", code);
+      urlParsed.searchParams.set("state", query.state);
+      res.redirect(urlParsed.toString());
       return;
     } else {
       // we got a response type we don't understand
-      const urlParsed = buildUrl(query.redirect_uri, {
-        error: "unsupported_response_type",
-      });
-      res.redirect(urlParsed);
+      const urlParsed = new url.URL(query.redirect_uri);
+      urlParsed.searchParams.set("error", "unsupported_response_type");
+      res.redirect(urlParsed.toString());
       return;
     }
   } else {
     // user denied access
-    const urlParsed = buildUrl(query.redirect_uri, {
-      error: "access_denied",
-    });
-    res.redirect(urlParsed);
+    const urlParsed = new url.URL(query.redirect_uri);
+    urlParsed.searchParams.set("error", "access_denied");
+    res.redirect(urlParsed.toString());
     return;
   }
 });
@@ -290,22 +284,6 @@ app.post("/token", (req, res) => {
     res.status(400).json({ error: "unsupported_grant_type" });
   }
 });
-
-const buildUrl = (base, options, hash) => {
-  const newUrl = url.parse(base, true);
-  delete newUrl.search;
-  if (!newUrl.query) {
-    newUrl.query = {};
-  }
-  Object.entries(options).forEach(([key, value]) => {
-    newUrl.query[key] = value;
-  });
-  if (hash) {
-    newUrl.hash = hash;
-  }
-
-  return url.format(newUrl);
-};
 
 const decodeClientCredentials = (auth) => {
   const clientCredentials = Buffer.from(auth.slice("basic ".length), "base64")
