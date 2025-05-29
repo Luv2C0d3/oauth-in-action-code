@@ -14,10 +14,15 @@
     "underscore.string": "^3.1.1"
   },
   "devDependencies": {
+    "@types/express": "^5.0.2",
+    "@types/node": "^22.15.24",
     "nodemon": "^3.1.10",
-    "typescript": "^5.4.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
   },
   "scripts": {
+    "start-meta": "tsc && node dist/authSrvMetaTS.js",
+    "dev-meta": "nodemon dist/authSrvMetaTS.js",
     "start": "node dist/authSrv.js",
     "dev": "nodemon dist/authSrv.js",
     "build": "tsc",
