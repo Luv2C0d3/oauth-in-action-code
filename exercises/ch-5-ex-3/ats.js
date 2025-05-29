@@ -1,3 +1,5 @@
+"use strict";
+
 const express = require("express");
 const url = require("url");
 const bodyParser = require("body-parser");
@@ -5,13 +7,11 @@ const randomstring = require("randomstring");
 const cons = require("consolidate");
 const nosql = require("nosql").load("database.nosql");
 const querystring = require("querystring");
-const __ = require("underscore");
-__.string = require("underscore.string");
 
 const app = express();
 
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true })); // support form-encoded bodies (for the token endpoint)
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.engine("html", cons.underscore);
 app.set("view engine", "html");
@@ -30,7 +30,7 @@ const clients = [
     client_id: "oauth-client-1",
     client_secret: "oauth-client-secret-1",
     redirect_uris: ["http://localhost:9000/callback"],
-    scope: "foo bar bazuka",
+    scope: "foo bar bazukas",
   },
 ];
 
@@ -39,9 +39,7 @@ const codes = {};
 const requests = {};
 
 const getClient = (clientId) => {
-  return __.find(clients, (client) => {
-    return client.client_id == clientId;
-  });
+  return clients.find((client) => client.client_id == clientId);
 };
 
 app.get("/", (req, res) => {
@@ -55,7 +53,7 @@ app.get("/authorize", (req, res) => {
     console.log("Unknown client %s", req.query.client_id);
     res.render("error", { error: "Unknown client" });
     return;
-  } else if (!__.contains(client.redirect_uris, req.query.redirect_uri)) {
+  } else if (!client.redirect_uris.includes(req.query.redirect_uri)) {
     console.log(
       "Mismatched redirect URI, expected %s got %s",
       client.redirect_uris,
@@ -70,7 +68,7 @@ app.get("/authorize", (req, res) => {
      */
     const rscope = req.query.scope ? req.query.scope.split(" ") : undefined;
     const cscope = client.scope ? client.scope.split(" ") : undefined;
-    if (__.difference(rscope, cscope).length > 0) {
+    if (rscope && cscope && rscope.filter(item => !cscope.includes(item)).length > 0) {
       const urlParsed = buildUrl(req.query.redirect_uri, {
         error: "invalid_scope",
       });
@@ -110,7 +108,7 @@ app.post("/approve", (req, res) => {
       const rscope = getScopesFromForm(req.body);
       const client = getClient(query.client_id);
       const cscope = client.scope ? client.scope.split(" ") : undefined;
-      if (__.difference(rscope, cscope).length > 0) {
+      if (rscope && cscope && rscope.filter(item => !cscope.includes(item)).length > 0) {
         const urlParsed = buildUrl(query.redirect_uri, {
           error: "invalid_scope",
         });
@@ -299,7 +297,7 @@ const buildUrl = (base, options, hash) => {
   if (!newUrl.query) {
     newUrl.query = {};
   }
-  __.each(options, (value, key, list) => {
+  Object.entries(options).forEach(([key, value]) => {
     newUrl.query[key] = value;
   });
   if (hash) {
@@ -319,11 +317,9 @@ const decodeClientCredentials = (auth) => {
 };
 
 const getScopesFromForm = (body) => {
-  return __.filter(__.keys(body), (s) => {
-    return __.string.startsWith(s, "scope_");
-  }).map((s) => {
-    return s.slice("scope_".length);
-  });
+  return Object.keys(body)
+    .filter((key) => key.startsWith("scope_"))
+    .map((key) => key.slice("scope_".length));
 };
 
 app.use("/", express.static("files/authorizationServer"));
