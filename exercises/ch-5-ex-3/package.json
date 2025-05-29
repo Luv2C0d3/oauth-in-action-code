@@ -23,8 +23,8 @@
   "scripts": {
     "start-meta": "tsc && node dist/authSrvMetaTS.js",
     "dev-meta": "nodemon dist/authSrvMetaTS.js",
-    "start": "node dist/authSrv.js",
-    "dev": "nodemon dist/authSrv.js",
+    "start-gemini": "node dist/authSrvGeminiTS.js",
+    "dev-gemini": "nodemon dist/authSrvGeminiTS.js",
     "build": "tsc",
     "watch": "tsc -w"
   }
